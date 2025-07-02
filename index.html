@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>PIXEL Pong Game</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #222;
+            color: #fff;
+            font-family: 'Press Start 2P', monospace, Arial;
+            text-align: center;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #pongCanvas {
+            background: #111;
+            image-rendering: pixelated;
+            margin: 0.3in auto 0 auto;
+            border: 4px solid #fff;
+            box-sizing: content-box;
+            display: block;
+            position: relative;
+            left: 0; right: 0; top: 0; bottom: 0;
+            width: calc(100vw - 2in);
+            height: calc(100vh - 1.2in);
+            max-width: 1800px;
+            max-height: 1000px;
+        }
+        #scoreboard {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 90vw;
+            max-width: 1600px;
+            margin: 24px auto 0 auto;
+            font-family: 'Press Start 2P', monospace, Arial;
+            font-size: 2.5vw;
+            color: #fff;
+            letter-spacing: 2px;
+            user-select: none;
+            z-index: 2;
+            position: relative;
+        }
+        #scoreboard .side {
+            width: 30vw;
+            min-width: 200px;
+            text-align: center;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        #scoreboard .center {
+            width: 30vw;
+            min-width: 200px;
+            text-align: center;
+            color: #888;
+            font-size: 1.2vw;
+        }
+        #startMenu {
+            position: absolute;
+            left: 0; right: 0; top: 0; bottom: 0;
+            /* เพิ่มพื้นหลังรูป */
+            background: url('https://blattbilliards.com/cdn/shop/articles/two-ping-pong-paddles-and-ball-on-blue-ping-pong-table_9cf060e3-0b77-455f-bfe7-8c5890bcc452_1024x.jpg?v=1748880436') center center no-repeat #222;
+            background-size: cover;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        #startMenu input {
+            font-family: 'Press Start 2P', monospace, Arial;
+            font-size: 1.2vw;
+            padding: 12px 24px;
+            margin: 16px 0;
+            border-radius: 8px;
+            border: 2px solid #fff;
+            background: #111;
+            color: #fff;
+            width: 320px;
+            max-width: 80vw;
+            text-align: center;
+        }
+        #startMenu button {
+            font-family: 'Press Start 2P', monospace, Arial;
+            font-size: 1.2vw;
+            padding: 12px 48px;
+            border-radius: 8px;
+            border: 2px solid #fff;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 24px;
+            transition: background 0.2s, color 0.2s;
+        }
+        #startMenu button:hover, #startMenu button:focus {
+            background: #fff;
+            color: #222;
+        }
+        #winnerPopup {
+            position: fixed;
+            left: 0; right: 0; top: 0; bottom: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #winnerPopup .popup-bg {
+            position: absolute;
+            left: 0; right: 0; top: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1;
+        }
+        #winnerPopup .popup-content {
+            position: relative;
+            z-index: 2;
+            background: #222;
+            border: 4px solid #fff;
+            border-radius: 18px;
+            padding: 48px 48px 32px 48px;
+            min-width: 320px;
+            max-width: 90vw;
+            text-align: center;
+            box-shadow: 0 8px 32px #000a;
+            overflow: hidden;
+        }
+        #winnerPopup #winnerText {
+            font-family: 'Press Start 2P', monospace, Arial;
+            font-size: 2vw;
+            color: #0f0;
+            margin-bottom: 32px;
+            word-break: break-all;
+        }
+        #winnerPopup button {
+            font-family: 'Press Start 2P', monospace, Arial;
+            font-size: 1.2vw;
+            padding: 12px 48px;
+            border-radius: 8px;
+            border: 2px solid #fff;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        #winnerPopup button:hover, #winnerPopup button:focus {
+            background: #fff;
+            color: #222;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+</head>
+<body tabindex="0">
+    <div id="startMenu">
+        <h1 style="margin-bottom:32px;">PIXEL PONG</h1>
+        <input id="playerLeftName" type="text" maxlength="16" placeholder="ชื่อผู้เล่นฝั่งบน (A/D)">
+        <input id="playerRightName" type="text" maxlength="16" placeholder="ชื่อผู้เล่นฝั่งล่าง (←/→)">
+        <input id="winScore" type="number" min="1" max="99" value="5" style="margin-top:8px;" placeholder="คะแนนที่จบเกม">
+        <button onclick="startGame()">เริ่มเกม</button>
+    </div>
+    <div id="scoreboard" style="display:none;">
+        <div class="side" id="scoreLeft"><span id="nameLeft"></span>: <span id="scoreLeftNum">0</span></div>
+        <div class="center">PIXEL PONG</div>
+        <div class="side" id="scoreRight"><span id="nameRight"></span>: <span id="scoreRightNum">0</span></div>
+    </div>
+    <div id="winnerPopup" style="display:none;">
+        <div class="popup-bg"></div>
+        <div class="popup-content">
+            <canvas id="fireworkCanvas" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;"></canvas>
+            <div id="winnerText" style="position:relative;z-index:2;"></div>
+            <div id="winnerScore" style="margin-bottom:32px; color:#fff; font-size:1.2vw; position:relative;z-index:2;"></div>
+            <div id="star-container" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1;"></div>
+            <button onclick="goToStartMenu()" style="position:relative;z-index:2;">กลับไปหน้าเริ่มเกม</button>
+        </div>
+    </div>
+    <canvas id="pongCanvas"></canvas>
+    <style>
+        /* ...existing code... */
+        #winnerPopup .popup-content {
+            /* ...existing code... */
+            overflow: hidden;
+        }
+        /* ...existing code... */
+    </style>
+    <script>
+        // Responsive canvas sizing
+        function resizeCanvas() {
+            const canvas = document.getElementById('pongCanvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- PIXEL PONG GAME LOGIC ---
+        let canvas = document.getElementById('pongCanvas');
+        let ctx = canvas.getContext('2d');
+
+        // Paddle and ball variables (will be set after resize)
+        let paddleWidth, paddleHeight, ballSize;
+        let leftX, rightX, leftY, rightY;
+        let leftScore = 0, rightScore = 0;
+        let ballX, ballY, ballSpeedX, ballSpeedY;
+        let leftMoveLeft = false, leftMoveRight = false;
+        let rightMoveLeft = false, rightMoveRight = false;
+        let paddleSpeed;
+        let playerLeft = "Player 1", playerRight = "Player 2";
+        let winScore = 5;
+
+        function initVars() {
+            canvas = document.getElementById('pongCanvas');
+            ctx = canvas.getContext('2d');
+            paddleWidth = Math.max(80, Math.floor(canvas.width * 0.13));
+            paddleHeight = Math.max(12, Math.floor(canvas.height * 0.03));
+            ballSize = Math.max(16, Math.floor(canvas.width * 0.025));
+            leftX = canvas.width/2 - paddleWidth/2;
+            rightX = canvas.width/2 - paddleWidth/2;
+            leftY = Math.floor(canvas.height * 0.08);
+            rightY = canvas.height - Math.floor(canvas.height * 0.08) - paddleHeight;
+            paddleSpeed = Math.max(7, Math.floor(canvas.width * 0.012));
+            ballX = canvas.width/2 - ballSize/2;
+            ballY = canvas.height/2 - ballSize/2;
+            ballSpeedX = (Math.random() > 0.5 ? 1 : -1) * Math.max(5, Math.floor(canvas.width * 0.008));
+            ballSpeedY = (Math.random() > 0.5 ? 1 : -1) * Math.max(3, Math.floor(canvas.height * 0.008));
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw net
+            ctx.fillStyle = "#fff";
+            for(let x=0; x<canvas.width; x+=Math.max(32, Math.floor(canvas.width/30))) {
+                ctx.fillRect(x, canvas.height/2-2, Math.max(16, Math.floor(canvas.width/60)), 4);
+            }
+
+            // Draw paddles
+            ctx.fillStyle = "#0ff";
+            ctx.fillRect(leftX, leftY, paddleWidth, paddleHeight);
+            ctx.fillStyle = "#f0f";
+            ctx.fillRect(rightX, rightY, paddleWidth, paddleHeight);
+
+            // Draw ball
+            ctx.fillStyle = "#ff0";
+            ctx.fillRect(ballX, ballY, ballSize, ballSize);
+        }
+
+        function resetBall(direction = 0) {
+            ballX = canvas.width/2 - ballSize/2;
+            ballY = canvas.height/2 - ballSize/2;
+            // direction: 0 = random, 1 = ไปหาผู้เล่นบน, 2 = ไปหาผู้เล่นล่าง
+            if (direction === 1) {
+                ballSpeedY = -Math.abs(Math.max(3, Math.floor(canvas.height * 0.008)));
+            } else if (direction === 2) {
+                ballSpeedY = Math.abs(Math.max(3, Math.floor(canvas.height * 0.008)));
+            } else {
+                ballSpeedY = (Math.random() > 0.5 ? 1 : -1) * Math.max(3, Math.floor(canvas.height * 0.008));
+            }
+            ballSpeedX = (Math.random() > 0.5 ? 1 : -1) * Math.max(5, Math.floor(canvas.width * 0.008));
+        }
+
+        function update() {
+            if (gameEnded) return;
+            // Paddle movement (smooth)
+            if (leftMoveLeft) leftX -= paddleSpeed;
+            if (leftMoveRight) leftX += paddleSpeed;
+            leftX = Math.max(0, Math.min(canvas.width-paddleWidth, leftX));
+            if (rightMoveLeft) rightX -= paddleSpeed;
+            if (rightMoveRight) rightX += paddleSpeed;
+            rightX = Math.max(0, Math.min(canvas.width-paddleWidth, rightX));
+
+            // Ball movement
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // Left paddle collision
+            if (
+                ballY <= leftY + paddleHeight &&
+                ballX + ballSize > leftX &&
+                ballX < leftX + paddleWidth &&
+                ballY > leftY
+            ) {
+                ballSpeedY = Math.abs(ballSpeedY);
+                ballSpeedX += (Math.random()-0.5)*2;
+            }
+            // Right paddle collision
+            if (
+                ballY + ballSize >= rightY &&
+                ballX + ballSize > rightX &&
+                ballX < rightX + paddleWidth &&
+                ballY < rightY + paddleHeight
+            ) {
+                ballSpeedY = -Math.abs(ballSpeedY);
+                ballSpeedX += (Math.random()-0.5)*2;
+            }
+
+            // Left/right wall
+            if(ballX <= 0 || ballX+ballSize >= canvas.width) {
+                ballSpeedX = -ballSpeedX;
+            }
+
+            // Score
+            if(!gameEnded && ballY < 0) {
+                rightScore++;
+                updateScoreboard();
+                if (rightScore >= winScore) {
+                    gameEnded = true;
+                    setTimeout(() => {
+                        showWinnerPopup(playerRight);
+                    }, 100);
+                    return;
+                }
+                resetBall(1); // เริ่มลูกไปหาผู้เล่นบน (ballSpeedY ติดลบ)
+            }
+            if(!gameEnded && ballY+ballSize > canvas.height) {
+                leftScore++;
+                updateScoreboard();
+                if (leftScore >= winScore) {
+                    gameEnded = true;
+                    setTimeout(() => {
+                        showWinnerPopup(playerLeft);
+                    }, 100);
+                    return;
+                }
+                resetBall(2); // เริ่มลูกไปหาผู้เล่นล่าง (ballSpeedY บวก)
+            }
+
+            draw();
+        }
+
+        function updateScoreboard() {
+            document.getElementById('scoreLeftNum').textContent = leftScore;
+            document.getElementById('scoreRightNum').textContent = rightScore;
+            document.getElementById('nameLeft').textContent = playerLeft;
+            document.getElementById('nameRight').textContent = playerRight;
+        }
+
+        // Player control (smooth)
+        document.addEventListener('keydown', e => {
+            // Left paddle: a/d, ฟ, ก
+            if(e.key === 'a' || e.key === 'A' || e.key === 'ฟ') leftMoveLeft = true;
+            if(e.key === 'd' || e.key === 'D' || e.key === 'ก') leftMoveRight = true;
+            // Right paddle: arrow left/right
+            if(e.key === 'ArrowLeft') rightMoveLeft = true;
+            if(e.key === 'ArrowRight') rightMoveRight = true;
+        });
+        document.addEventListener('keyup', e => {
+            if(e.key === 'a' || e.key === 'A' || e.key === 'ฟ') leftMoveLeft = false;
+            if(e.key === 'd' || e.key === 'D' || e.key === 'ก') leftMoveRight = false;
+            if(e.key === 'ArrowLeft') rightMoveLeft = false;
+            if(e.key === 'ArrowRight') rightMoveRight = false;
+        });
+
+        let intervalId = null;
+        let gameEnded = false;
+
+        function startGame() {
+            playerLeft = document.getElementById('playerLeftName').value.trim() || "Player 1";
+            playerRight = document.getElementById('playerRightName').value.trim() || "Player 2";
+            winScore = parseInt(document.getElementById('winScore').value) || 5;
+            document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('scoreboard').style.display = 'flex';
+            resizeCanvas();
+            initVars();
+            leftScore = 0;
+            rightScore = 0;
+            gameEnded = false;
+            updateScoreboard();
+            if(intervalId) clearInterval(intervalId);
+            intervalId = setInterval(update, 1000/60);
+        }
+
+        // Firework and star effect for popup
+        function launchFireworks() {
+            const canvas = document.getElementById('fireworkCanvas');
+            const popup = document.querySelector('#winnerPopup .popup-content');
+            canvas.width = popup.offsetWidth;
+            canvas.height = popup.offsetHeight;
+            const ctx = canvas.getContext('2d');
+            let fireworks = [];
+            let stars = [];
+            let running = true;
+
+            function randomColor() {
+                const colors = ['#ff0', '#0ff', '#f0f', '#f44', '#0f0', '#fff', '#fa0', '#0af'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            function createFirework() {
+                const x = Math.random() * canvas.width * 0.8 + canvas.width * 0.1;
+                const y = Math.random() * canvas.height * 0.3 + canvas.height * 0.2;
+                const color = randomColor();
+                const count = 24 + Math.floor(Math.random() * 12);
+                let particles = [];
+                for (let i = 0; i < count; i++) {
+                    const angle = (Math.PI * 2 * i) / count;
+                    const speed = 2 + Math.random() * 2;
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        alpha: 1,
+                        color: color
+                    });
+                }
+                fireworks.push({particles});
+            }
+
+            function createStars() {
+                const starContainer = document.getElementById('star-container');
+                starContainer.innerHTML = '';
+                for (let i = 0; i < 30; i++) {
+                    const star = document.createElement('div');
+                    star.style.position = 'absolute';
+                    star.style.left = Math.random() * 100 + '%';
+                    star.style.top = Math.random() * 100 + '%';
+                    star.style.width = '10px';
+                    star.style.height = '10px';
+                    star.style.background = randomColor();
+                    star.style.borderRadius = '50%';
+                    star.style.opacity = 0.7;
+                    star.style.filter = 'blur(1px)';
+                    star.style.animation = `star-pop 1.2s cubic-bezier(.5,0,.5,1) ${Math.random()}s both`;
+                    starContainer.appendChild(star);
+                }
+            }
+
+            function drawFireworks() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let fw of fireworks) {
+                    for (let p of fw.particles) {
+                        ctx.globalAlpha = p.alpha;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color;
+                        ctx.fill();
+                    }
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            function updateFireworks() {
+                for (let fw of fireworks) {
+                    for (let p of fw.particles) {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vx *= 0.97;
+                        p.vy *= 0.97;
+                        p.vy += 0.04;
+                        p.alpha *= 0.96;
+                    }
+                }
+                fireworks = fireworks.filter(fw => fw.particles.some(p => p.alpha > 0.05));
+            }
+
+            function animate() {
+                if (!running) return;
+                drawFireworks();
+                updateFireworks();
+                requestAnimationFrame(animate);
+            }
+
+            // Launch a few fireworks at start
+            for (let i = 0; i < 4; i++) setTimeout(createFirework, i * 350);
+            createStars();
+            animate();
+
+            // Stop animation after 2.5s
+            setTimeout(() => { running = false; ctx.clearRect(0,0,canvas.width,canvas.height); }, 2500);
+            setTimeout(() => { document.getElementById('star-container').innerHTML = ''; }, 2500);
+        }
+
+        // Add star pop animation
+        const style = document.createElement('style');
+        style.innerHTML = `
+        @keyframes star-pop {
+            0% { transform: scale(0.2) translateY(0); opacity: 0.5;}
+            60% { opacity: 1;}
+            100% { transform: scale(1.5) translateY(-40px); opacity: 0;}
+        }
+        `;
+        document.head.appendChild(style);
+
+        function showWinnerPopup(winnerName) {
+            document.getElementById('winnerText').textContent = `${winnerName} ชนะ!`;
+            document.getElementById('winnerScore').innerHTML =
+                `<span style="color:#0ff">${playerLeft}</span>: ${leftScore} <br><span style="color:#f0f">${playerRight}</span>: ${rightScore}`;
+            document.getElementById('winnerPopup').style.display = 'flex';
+            gameEnded = true;
+            if(intervalId) clearInterval(intervalId);
+            setTimeout(launchFireworks, 100); // launch fireworks after popup visible
+        }
+        function goToStartMenu() {
+            document.getElementById('winnerPopup').style.display = 'none';
+            document.getElementById('scoreboard').style.display = 'none';
+            document.getElementById('startMenu').style.display = 'flex';
+            if(intervalId) clearInterval(intervalId);
+            leftScore = 0;
+            rightScore = 0;
+            gameEnded = false;
+            updateScoreboard();
+            resizeCanvas();
+            initVars();
+            draw();
+        }
+
+        // Responsive on resize
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initVars();
+            draw();
+        });
+
+        // Initial setup
+        resizeCanvas();
+        initVars();
+        draw();
+    </script>
+</body>
+</html>
